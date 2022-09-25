@@ -1,0 +1,60 @@
+version: 2.1
+
+orbs: 
+  python: circleci/python@2.0.3
+
+executors:
+  py-small:
+    docker:
+      - image: cimg/python:3.10.1
+    resource_class: small
+
+parameters:
+  url:
+    type: string
+    default: ""
+    description: ticket URL
+
+jobs:
+  lint:
+    executor: py-small
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run:
+          name: Lint with Black
+          command: |
+            poetry run black . --check
+  eval:
+    executor: py-small
+    environment:
+      # NOTE: Replace this value accordingly.
+      ZENDESK_SUBDOMAIN: kelvintaywl
+    steps:
+      - checkout
+      - python/install-packages:
+          pkg-manager: poetry
+      - run:
+          name: Evaluate response time
+          command: |
+            poetry run python cli.py << pipeline.parameters.url >>
+      - run: |
+          mkdir tickets
+          mv *.csv tickets/
+      - store_artifacts:
+          path: ./tickets
+
+workflows:
+  evaluate:
+    when:
+      and:
+        - equal: [ api, << pipeline.trigger_source >> ]
+        - << pipeline.parameters.url >>
+    jobs:
+      - eval
+  build:
+    when:
+      equal: [ webhook, << pipeline.trigger_source >> ]
+    jobs:
+      - lint
