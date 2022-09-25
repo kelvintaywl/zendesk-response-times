@@ -55,6 +55,7 @@ workflows:
       - eval
   build:
     when:
-      equal: [ webhook, << pipeline.trigger_source >> ]
+      and:
+        - equal: [ webhook, << pipeline.trigger_source >> ]
     jobs:
       - lint
