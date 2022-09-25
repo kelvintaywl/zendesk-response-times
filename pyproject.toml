@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "zendesk-response-times"
+version = "1.0.0"
+description = "Tool to evaluate response times of our Support team for a given ticket."
+authors = ["kelvintaywl <kelvintaywl@gmail.com>"]
+license = "cc0-1.0"
+
+[tool.poetry.dependencies]
+python = "3.10.1"
+zenpy = "^2.0.25"
+click = "^8.1.3"
+
+[tool.poetry.dev-dependencies]
+black = "^22.8.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
