@@ -4,17 +4,16 @@ This works only on 1 specific ticket.
 
 Requires the following secrets (as environment variables):
 
-  - ZENDESK_EMAIL: ZenDesk user email
-  - ZENDESK_TOKEN: ZenDesk user API token
-  - ZENDESK_SUBDOMAIN: ZenDesk subdomain (e.g., foobar if you are on foobar.zendesk.com)
+  - ZENDESK_EMAIL: Zendesk user email
+  - ZENDESK_TOKEN: Zendesk user API token
+  - ZENDESK_SUBDOMAIN: Zendesk subdomain (e.g., foobar if you are on foobar.zendesk.com)
 
 Example usage:
 
-    # evaluates ticket 112225, outputs in 112225.csv
-    $ poetry run python cli.py https://foobar.zendesk.com/agent/tickets/112225
+    # evaluates ticket 123, outputs in 123.csv
+    $ poetry run python cli.py https://foobar.zendesk.com/agent/tickets/123
 """
 
-import argparse
 from collections import defaultdict
 import csv
 from dataclasses import dataclass, field
@@ -25,6 +24,7 @@ import re
 from typing import Iterable, Optional
 from urllib.parse import urlparse
 
+import click
 from zenpy import Zenpy
 from zenpy.lib.api_objects import (
     Comment as ZenpyComment,
@@ -127,8 +127,8 @@ class Evaulation:
 
     FIELDS = [
         "email",
-        "user_type",
-        "commented_at",
+        "user type",
+        "commented at",
         "formula",
         "weekends",
         "response time",
@@ -139,8 +139,8 @@ class Evaulation:
         record.update(
             {
                 "email": self.response.user.email,
-                "user_type": "agent" if self.response.user.is_agent() else "customer",
-                "commented_at": str(self.response.responded_at),
+                "user type": "agent" if self.response.user.is_agent() else "customer",
+                "commented at": str(self.response.responded_at),
             }
         )
         if self.time_taken:
@@ -207,35 +207,28 @@ def responses(ticket_url: str) -> Iterable[Response]:
             )
 
 
-def parse_args():
-    # uses the docstring above to generate description.
-    parser = argparse.ArgumentParser(
-        epilog=__doc__,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
-    parser.add_argument(
-        "ticket_url",
-        metavar="URL",
-        # nargs=2,
-        type=str,
-        help="Ticket URL",
-    )
-    return parser.parse_args()
+@click.command()
+@click.argument("ticket_url", nargs=1)
+@click.option("--output", "-o", required=False, type=click.Path(exists=False))
+def cli(ticket_url: str, output: str):
+    """ """
+    ticket = Ticket.from_url(ticket_url)
 
-
-if __name__ == "__main__":
-    args = parse_args()
-
-    ticket = Ticket.from_url(args.ticket_url)
-
+    click.secho(f"Evaluating {ticket_url}", fg="yellow")
     evaluated = Evaluate(responses(ticket.id))
+    click.secho(f"Evaluated {ticket_url}", fg="green")
 
-    # TODO: allow customization of filename
-    out = f"{ticket.id}.csv"
+    out = output or f"{ticket.id}.csv"
+    assert os.path.splitext(out)[1] == ".csv"
+
     with open(out, "w") as outfile:
         w = csv.DictWriter(outfile, fieldnames=Evaulation.FIELDS)
         w.writeheader()
         for e in evaluated:
             w.writerow(e.as_record())
 
-        print(f"[success] created {out}")
+    click.secho(f"Generated evaluated output: {out}", fg="green")
+
+
+if __name__ == "__main__":
+    cli()
